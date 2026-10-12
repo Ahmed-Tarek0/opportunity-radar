@@ -48,7 +48,7 @@ class Settings(BaseSettings):
     request_timeout_seconds: int = 15
     max_pages_per_source: int = 2
     max_concurrent_source_requests: int = 3
-    job_lookback_days: int = 7
+    job_lookback_days: int = 30
     enable_linkedin_source: bool = True
     enable_wuzzuf_source: bool = True
     enable_remoteok_source: bool = True

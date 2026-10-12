@@ -184,3 +184,73 @@ def test_query_generator_fallback():
     profile = CandidateProfile()  # empty profile
     queries = generate_search_queries(profile)
     assert len(queries) >= 1
+
+
+def test_cybersecurity_candidate_scores_high_on_cyber_job_and_low_on_ai_job():
+    cyber_profile = _make_profile(
+        target_titles=[
+            TargetTitle(title="Cybersecurity Engineer", confidence=0.9),
+            TargetTitle(title="SOC Analyst", confidence=0.8),
+        ],
+        skills=[
+            Skill(name="penetration testing", original="Penetration Testing", evidence_type=EvidenceType.explicit),
+            Skill(name="wireshark", original="Wireshark", evidence_type=EvidenceType.explicit),
+            Skill(name="owasp", original="OWASP", evidence_type=EvidenceType.explicit),
+            Skill(name="burp suite", original="Burp Suite", evidence_type=EvidenceType.explicit),
+        ],
+    )
+    cyber_job = _make_job(
+        title="Information Security & Penetration Testing Engineer",
+        required_skills=["Penetration Testing", "Wireshark", "OWASP"],
+    )
+    ai_job = _make_job(
+        title="Machine Learning Engineer",
+        required_skills=["PyTorch", "Deep Learning", "TensorFlow"],
+    )
+
+    cyber_res = compute_match_score(cyber_profile, cyber_job)
+    ai_res = compute_match_score(cyber_profile, ai_job)
+
+    assert cyber_res.match_score >= 70
+    assert ai_res.match_score <= 45
+
+
+def test_frontend_candidate_scores_high_on_frontend_job():
+    frontend_profile = _make_profile(
+        target_titles=[
+            TargetTitle(title="Frontend Developer", confidence=0.9),
+        ],
+        skills=[
+            Skill(name="react", original="React", evidence_type=EvidenceType.explicit),
+            Skill(name="typescript", original="TypeScript", evidence_type=EvidenceType.explicit),
+            Skill(name="css", original="CSS", evidence_type=EvidenceType.explicit),
+        ],
+    )
+    frontend_job = _make_job(
+        title="Senior Frontend React Engineer",
+        required_skills=["React", "TypeScript", "CSS"],
+    )
+    devops_job = _make_job(
+        title="DevOps Cloud Infrastructure Engineer",
+        required_skills=["Kubernetes", "Terraform", "AWS"],
+    )
+
+    fe_res = compute_match_score(frontend_profile, frontend_job)
+    devops_res = compute_match_score(frontend_profile, devops_job)
+
+    assert fe_res.match_score >= 75
+    assert devops_res.match_score <= 45
+
+
+def test_non_software_job_penalized():
+    profile = _make_profile(
+        target_titles=[TargetTitle(title="Software Engineer", confidence=0.9)],
+        skills=[Skill(name="python", original="Python", evidence_type=EvidenceType.explicit)],
+    )
+    non_sw_job = _make_job(
+        title="Solar Power Mechanical Maintenance Engineer",
+        required_skills=["Solar", "Mechanical", "Maintenance"],
+    )
+    res = compute_match_score(profile, non_sw_job)
+    assert res.match_score <= 45
+

@@ -68,37 +68,46 @@ class RemotiveSource(JobSource):
 
         # Prioritize compound search phrases for precision, then individual keywords
         compound_terms = []
-        for q in queries[:5]:
+        known_compounds = [
+            "cybersecurity", "security engineer", "information security", "penetration test", "soc analyst",
+            "devops", "cloud engineer", "site reliability", "platform engineer", "infrastructure engineer",
+            "frontend", "front end", "full stack", "fullstack", "react", "next.js", "web developer",
+            "backend", "back end", "python developer", "java developer", "node.js",
+            "mobile developer", "flutter", "react native", "android developer", "ios developer",
+            "qa engineer", "test automation", "software testing", "quality assurance",
+            "data engineer", "data science", "machine learning", "data analyst", "deep learning",
+            "embedded", "firmware",
+        ]
+        for q in queries[:6]:
             ql = q.lower()
-            for compound in ["data science", "machine learning", "data analyst", "deep learning",
-                             "data analytics", "artificial intelligence", "computer vision",
-                             "business intelligence", "data engineer"]:
+            for compound in known_compounds:
                 if compound in ql and compound not in compound_terms:
                     compound_terms.append(compound)
 
         # Fall back to individual domain keywords from queries
         keyword_terms: list[str] = []
-        for q in queries[:5]:
+        for q in queries[:6]:
             for word in q.lower().split():
-                if (len(word) > 4
-                        and word not in {"intern", "internship", "junior", "senior", "entry",
-                                         "level", "engineer", "specialist", "analyst"}
-                        and word not in keyword_terms):
+                if (
+                    len(word) > 3
+                    and word not in {"intern", "internship", "junior", "senior", "entry", "level", "developer", "engineer", "specialist"}
+                    and word not in keyword_terms
+                ):
                     keyword_terms.append(word)
 
-        search_terms_list = (compound_terms + keyword_terms)[:4]
+        search_terms_list = (compound_terms + keyword_terms)[:5]
         if not search_terms_list:
-            search_terms_list = ["data science", "python"]
+            search_terms_list = ["software engineer", "developer"]
 
-        # Build relevance keyword set for post-fetch filtering — include domain synonyms
-        base_keywords = {w for q in queries for w in q.lower().split() if len(w) > 3}
-        # Expand with close domain synonyms to avoid over-filtering
-        domain_extras = {
-            "data", "science", "scientist", "analyst", "analytics", "machine",
-            "learning", "python", "deep", "neural", "model", "prediction",
-            "intelligence", "artificial", "analysis", "engineering", "research",
+        # Build relevance keyword set for post-fetch filtering
+        base_keywords = {
+            w for q in queries for w in q.lower().split()
+            if len(w) >= 3 and w not in {"the", "and", "for", "with", "junior", "senior", "lead", "intern", "entry"}
         }
-        relevance_keywords = base_keywords | domain_extras
+        general_tech = {
+            "software", "engineer", "developer", "programmer", "engineering", "architect",
+        }
+        relevance_keywords = base_keywords | set(compound_terms) | general_tech
 
         for term in search_terms_list:
             try:

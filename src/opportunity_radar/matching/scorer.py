@@ -105,12 +105,58 @@ def compute_match_score(
         "nlp", "natural language processing", "computer vision",
         "llm", "langchain", "huggingface", "mlops",
     })
+    has_cyber_skills = bool(cand_skills_lower & {
+        "cybersecurity", "security", "soc", "penetration testing", "ethical hacking",
+        "vulnerability assessment", "appsec", "infosec", "network security", "wireshark",
+        "splunk", "kali linux", "siem", "owasp", "incident response",
+    })
+    has_devops_skills = bool(cand_skills_lower & {
+        "docker", "kubernetes", "k8s", "terraform", "ansible", "helm",
+        "aws", "azure", "gcp", "ci/cd", "jenkins", "gitlab ci", "prometheus", "grafana",
+    })
+    has_mobile_skills = bool(cand_skills_lower & {
+        "flutter", "react native", "swift", "kotlin", "ios", "android", "mobile app",
+    })
+    has_qa_skills = bool(cand_skills_lower & {
+        "qa", "quality assurance", "selenium", "playwright", "cypress", "test automation",
+        "pytest", "jmeter", "manual testing", "sdet", "unit testing",
+    })
+    has_data_eng_skills = bool(cand_skills_lower & {
+        "data engineer", "apache spark", "pyspark", "airflow", "dbt", "kafka", "etl",
+        "data warehouse", "bigquery", "databricks", "snowflake",
+    })
+    has_embedded_skills = bool(cand_skills_lower & {
+        "embedded", "firmware", "rtos", "microcontroller", "arm", "stm32", "verilog", "vhdl", "iot",
+    })
     has_python_skills = bool(cand_skills_lower & {"python", "django", "fastapi", "flask"})
     has_web_skills = bool(cand_skills_lower & {"react", "javascript", "typescript", "frontend", "vue", "angular", "node.js"})
 
-
     if has_ai_skills:
         for extra in ["ai software engineer", "ai engineer", "machine learning engineer"]:
+            if extra not in candidate_titles:
+                candidate_titles.append(extra)
+    if has_cyber_skills:
+        for extra in ["cybersecurity engineer", "security engineer", "information security analyst", "soc analyst"]:
+            if extra not in candidate_titles:
+                candidate_titles.append(extra)
+    if has_devops_skills:
+        for extra in ["devops engineer", "cloud engineer", "site reliability engineer"]:
+            if extra not in candidate_titles:
+                candidate_titles.append(extra)
+    if has_mobile_skills:
+        for extra in ["mobile developer", "flutter developer", "android developer", "ios developer"]:
+            if extra not in candidate_titles:
+                candidate_titles.append(extra)
+    if has_qa_skills:
+        for extra in ["qa automation engineer", "qa engineer", "software test engineer"]:
+            if extra not in candidate_titles:
+                candidate_titles.append(extra)
+    if has_data_eng_skills:
+        for extra in ["data engineer", "etl developer"]:
+            if extra not in candidate_titles:
+                candidate_titles.append(extra)
+    if has_embedded_skills:
+        for extra in ["embedded systems engineer", "firmware engineer"]:
             if extra not in candidate_titles:
                 candidate_titles.append(extra)
     if has_python_skills and not has_ai_skills:
@@ -127,105 +173,161 @@ def compute_match_score(
     title_score = 0.0
     title_reason = ""
 
-    # AI/ML/Data-specific domain words — overlap with these = real domain match
+    # Software domains taxonomy
     ai_domain_keywords = {
-        "ai", "ml", "machine", "learning", "deep", "nlp", "data", "analyst",
-        "analytics", "scientist", "science", "intelligence", "vision", "llm",
-        "language", "model", "neural", "computer", "genai", "generative",
+        "ai", "ml", "machine", "learning", "deep", "nlp", "llm", "neural",
+        "vision", "genai", "generative", "intelligence",
     }
-    # Broad tech words — valid domain context but NOT sufficient alone for strong match
-    tech_keywords = {
-        "python", "backend", "frontend", "fullstack", "devops", "cloud",
-        "software", "developer", "qa", "testing", "architect",
+    data_domain_keywords = {
+        "data", "analyst", "analytics", "scientist", "science", "bi", "tableau", "spark", "airflow",
     }
-    # Non-AI domains — penalize when these appear in job title
-    non_ai_domain_keywords = {
-        "electrical", "mechanical", "solar", "power", "hardware", "embedded",
-        "helpdesk", "service desk", "tier", "telecom", "civil", "structural",
-        "hvac", "piping", "maintenance", "manufacturing", "industrial", "field",
-        "network", "radio", "rf", "optical", "biomedical", "chemical", "material",
+    cyber_domain_keywords = {
+        "cybersecurity", "security", "infosec", "soc", "penetration", "pentest",
+        "vulnerability", "appsec", "cryptography", "defensive", "offensive",
     }
-    all_domain_keywords = ai_domain_keywords | tech_keywords | {"engineer", "engineering"}
+    devops_domain_keywords = {
+        "devops", "cloud", "sre", "reliability", "infrastructure", "kubernetes",
+        "k8s", "terraform", "platform", "docker", "sysadmin",
+    }
+    frontend_domain_keywords = {
+        "frontend", "front-end", "react", "vue", "angular", "nextjs", "javascript", "typescript", "ui", "web",
+    }
+    backend_domain_keywords = {
+        "backend", "back-end", "python", "django", "fastapi", "flask", "java", "spring",
+        "node", "nodejs", "golang", "go", "c#", ".net", "dotnet", "api", "php", "ruby",
+    }
+    mobile_domain_keywords = {
+        "mobile", "ios", "android", "flutter", "react native", "swift", "kotlin",
+    }
+    qa_domain_keywords = {
+        "qa", "quality", "test", "testing", "automation", "sdet", "tester",
+    }
+    embedded_domain_keywords = {
+        "embedded", "firmware", "iot", "rtos", "microcontroller",
+    }
+    all_software_domain_keywords = (
+        ai_domain_keywords
+        | data_domain_keywords
+        | cyber_domain_keywords
+        | devops_domain_keywords
+        | frontend_domain_keywords
+        | backend_domain_keywords
+        | mobile_domain_keywords
+        | qa_domain_keywords
+        | embedded_domain_keywords
+    )
 
-    # Check if job title is in a completely different domain
-    job_title_words_raw = set(job_title_lower.replace("-", " ").replace("/", " ").split())
-    is_non_ai_domain = bool(job_title_words_raw & non_ai_domain_keywords)
+    non_software_domain_keywords = {
+        "electrical", "mechanical", "solar", "power", "helpdesk", "service desk",
+        "telecom", "civil", "structural", "hvac", "piping", "maintenance",
+        "manufacturing", "industrial", "sales", "marketing", "recruiter", "talent",
+        "accountant", "accounting", "finance", "legal", "medical", "doctor",
+        "nurse", "broker", "real estate", "driver", "cashier", "chef", "cook",
+        "dean", "receptionist", "copywriter", "writer",
+    }
 
-    # Detect if job is explicitly an AI/ML/Data role vs candidate has AI/ML/Data target
-    job_is_ai_role = bool(
-        {"ai", "artificial", "machine", "learning", "deep", "nlp", "llm", "genai", "generative"} & job_title_words_raw
+    job_title_words_raw = set(job_title_lower.replace("-", " ").replace("/", " ").replace("(", " ").replace(")", " ").split())
+    is_non_software_domain = bool(job_title_words_raw & non_software_domain_keywords)
+
+    # Check candidate track signals
+    cand_has_ai = has_ai_skills or any(any(k in t for k in ai_domain_keywords) for t in candidate_titles)
+    cand_has_cyber = has_cyber_skills or any(any(k in t for k in cyber_domain_keywords) for t in candidate_titles)
+    cand_has_devops = has_devops_skills or any(any(k in t for k in devops_domain_keywords) for t in candidate_titles)
+    cand_has_mobile = has_mobile_skills or any(any(k in t for k in mobile_domain_keywords) for t in candidate_titles)
+    cand_has_qa = has_qa_skills or any(any(k in t for k in qa_domain_keywords) for t in candidate_titles)
+    cand_has_embedded = has_embedded_skills or any(any(k in t for k in embedded_domain_keywords) for t in candidate_titles)
+
+    # Check job specialized track signals
+    job_is_ai = bool(
+        job_title_words_raw & {"ai", "machine", "learning", "deep", "nlp", "llm", "genai", "generative"}
         or any(phrase in job_title_lower for phrase in ["machine learning", "deep learning", "artificial intelligence", "data science"])
     )
-    candidate_has_ai_target = any(
-        any(phrase in t for phrase in ["ai", "machine learning", "deep learning", "artificial intelligence", "data science"])
-        for t in candidate_titles
+    job_is_cyber = bool(
+        job_title_words_raw & {"cybersecurity", "security", "infosec", "soc", "penetration", "pentest", "appsec"}
+        or any(phrase in job_title_lower for phrase in ["cyber security", "information security", "penetration test", "ethical hack"])
+    )
+    job_is_devops = bool(
+        job_title_words_raw & {"devops", "sre", "kubernetes", "k8s", "terraform"}
+        or any(phrase in job_title_lower for phrase in ["platform engineer", "infrastructure engineer", "site reliability"])
+    )
+    job_is_mobile = bool(
+        job_title_words_raw & {"mobile", "ios", "android", "flutter", "swift", "kotlin"}
+        or "react native" in job_title_lower
+    )
+    job_is_qa = bool(
+        job_title_words_raw & {"qa", "sdet", "tester"}
+        or any(phrase in job_title_lower for phrase in ["quality assurance", "test automation", "software test"])
+    )
+    job_is_embedded = bool(
+        job_title_words_raw & {"embedded", "firmware", "rtos", "microcontroller"}
+        or "embedded systems" in job_title_lower
     )
 
     for target in candidate_titles:
-        target_words = set(target.split())
-        job_words = set(job_title_lower.split())
+        target_words = set(target.replace("-", " ").replace("/", " ").split())
+        job_words = set(job_title_lower.replace("-", " ").replace("/", " ").split())
         overlap = (target_words & job_words) - {
             "and", "&", "the", "in", "for", "with",
             "senior", "junior", "lead", "mid", "intern", "associate",
         }
-        domain_overlap = overlap & all_domain_keywords
-        ai_overlap = overlap & ai_domain_keywords
+        software_overlap = overlap & all_software_domain_keywords
 
         if len(overlap) >= 2:
-            # Strong 2+ word overlap — but only award full 25 if at least one is AI-domain specific
-            # AND the job is not in a completely different engineering domain.
-            # e.g. "machine" in "Electrical Power Machine" ≠ "Machine Learning"
-            generic_only = (overlap <= {"software", "engineer", "engineering", "developer"})
-            if ai_overlap and not is_non_ai_domain:
-                # Real AI/data domain match with no conflicting domain signals
+            generic_only = (overlap <= {"software", "engineer", "engineering", "developer", "programmer"})
+            if software_overlap and not is_non_software_domain:
+                # Strong in-domain title match across any software specialization
                 title_score = 25.0
-                title_reason = f"Strong AI-domain title match: '{target}' aligns with '{job.title}'."
+                title_reason = f"Strong title match: '{target}' aligns with '{job.title}'."
                 break
-            elif ai_overlap and is_non_ai_domain:
-                # AI word appears but job domain is clearly non-AI (e.g. "machine" in "Power Machine")
+            elif software_overlap and is_non_software_domain:
                 title_score = max(title_score, 7.0)
-                title_reason = (
-                    f"AI keyword ('{', '.join(ai_overlap)}') in job title, but job is in a non-AI domain."
-                )
-            elif generic_only or is_non_ai_domain:
-                # Only generic words or job is in a different domain — soft partial match
+                title_reason = f"Tech keyword ('{', '.join(software_overlap)}') in job title, but job is in a non-software domain."
+            elif generic_only or is_non_software_domain:
                 title_score = max(title_score, 10.0)
-                title_reason = (
-                    f"Generic title overlap ('{', '.join(overlap)}') — job domain may differ from '{target}'."
-                )
+                title_reason = f"Generic title overlap ('{', '.join(overlap)}') — job domain may differ from '{target}'."
             else:
-                # Tech overlap (backend, devops, etc.) without AI words
-                title_score = max(title_score, 18.0)
-                title_reason = f"Tech-domain title match: '{target}' aligns with '{job.title}'."
+                title_score = max(title_score, 20.0)
+                title_reason = f"Title match: '{target}' aligns with '{job.title}'."
         elif len(overlap) == 1:
             matched_word = list(overlap)[0]
-            if matched_word in ai_domain_keywords and not is_non_ai_domain:
+            if matched_word in all_software_domain_keywords and not is_non_software_domain:
                 title_score = max(title_score, 18.0)
-                title_reason = f"AI-domain keyword '{matched_word}' aligns with target '{target}'."
-            elif matched_word in tech_keywords and not is_non_ai_domain:
+                title_reason = f"Domain keyword '{matched_word}' aligns with target '{target}'."
+            elif matched_word in {"software", "developer", "programmer"} and not is_non_software_domain:
                 title_score = max(title_score, 10.0)
-                title_reason = f"Tech keyword '{matched_word}' aligns with target '{target}'."
-            elif matched_word in {"engineer", "engineering"} and not is_non_ai_domain:
-                # "engineer" alone is too generic — give minimal points only if domain looks OK
+                title_reason = f"Software keyword '{matched_word}' partially matches '{target}'."
+            elif matched_word in {"engineer", "engineering"} and not is_non_software_domain:
                 title_score = max(title_score, 6.0)
                 title_reason = f"Generic word '{matched_word}' partially matches '{target}' (weak signal)."
             else:
                 title_score = max(title_score, 4.0)
-                title_reason = f"Weak/generic overlap ('{matched_word}') with '{target}'."
+                title_reason = f"Weak overlap ('{matched_word}') with '{target}'."
 
-    # Domain mismatch penalty: If the job is clearly an AI/ML role, but the candidate has no AI/ML target/profile
-    if job_is_ai_role and not candidate_has_ai_target:
+    # Universal cross-domain mismatch penalties:
+    # If a job is explicitly specialized in a domain where candidate has NO target or skills, penalize title score.
+    if job_is_ai and not cand_has_ai:
         title_score = min(title_score, 6.0)
-        title_reason = (
-            f"Job is an AI/ML specialized role ('{job.title}'), while candidate profile is outside AI domain."
-        )
+        title_reason = f"Job is an AI/ML specialized role ('{job.title}'), while candidate profile is outside AI domain."
+    elif job_is_cyber and not cand_has_cyber:
+        title_score = min(title_score, 6.0)
+        title_reason = f"Job is a Cybersecurity specialized role ('{job.title}'), while candidate profile is outside Security domain."
+    elif job_is_devops and not cand_has_devops:
+        title_score = min(title_score, 6.0)
+        title_reason = f"Job is a DevOps/Cloud specialized role ('{job.title}'), while candidate profile is outside DevOps domain."
+    elif job_is_mobile and not cand_has_mobile:
+        title_score = min(title_score, 6.0)
+        title_reason = f"Job is a Mobile specialized role ('{job.title}'), while candidate profile is outside Mobile domain."
+    elif job_is_qa and not cand_has_qa:
+        title_score = min(title_score, 6.0)
+        title_reason = f"Job is a QA/Testing specialized role ('{job.title}'), while candidate profile is outside QA domain."
+    elif job_is_embedded and not cand_has_embedded:
+        title_score = min(title_score, 6.0)
+        title_reason = f"Job is an Embedded Systems specialized role ('{job.title}'), while candidate profile is outside Embedded domain."
 
-    # Extra penalty if the job title is clearly in a non-AI engineering domain
-    if is_non_ai_domain and title_score > 0 and not any(w in job_title_words_raw for w in ai_domain_keywords):
+    # Extra penalty if the job title is clearly in a non-software domain
+    if is_non_software_domain and title_score > 0 and not (job_title_words_raw & all_software_domain_keywords):
         title_score = min(title_score, 5.0)
-        title_reason = (
-            title_reason + " [Penalized: job title contains non-AI domain keywords]"
-        )
+        title_reason = title_reason + " [Penalized: job title contains non-software domain keywords]"
 
     if not candidate_titles:
         title_score = 12.5

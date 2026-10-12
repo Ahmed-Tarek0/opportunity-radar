@@ -89,13 +89,17 @@ def generate_search_queries(profile: CandidateProfile) -> list[str]:
 
 def _get_top_skills(profile: CandidateProfile) -> list[str]:
     """Get the most prominent skills from the profile."""
-    # Prioritize industry-standard primary keywords
-    PRIMARY_KEYWORDS = {
+    # Prioritize industry-standard primary keywords across all tracks
+    primary_keywords = {
         "python", "sql", "data science", "machine learning", "power bi",
-        "pandas", "tensorflow", "tableau", "excel", "javascript", "react"
+        "pandas", "tensorflow", "tableau", "excel", "javascript", "react",
+        "cybersecurity", "docker", "kubernetes", "flutter", "aws", "azure",
+        "node.js", "django", "fastapi", "c++", "c#", "java", "golang",
+        "selenium", "playwright", "devops", "embedded",
     }
     skills = sorted(
         profile.skills,
-        key=lambda s: (0 if s.name.lower() in PRIMARY_KEYWORDS else 1, -s.confidence, s.name),
+        key=lambda s: (0 if s.name.lower() in primary_keywords else 1, -s.confidence, s.name),
     )
     return [s.name for s in skills[:5]]
+

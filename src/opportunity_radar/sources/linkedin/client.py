@@ -87,7 +87,7 @@ class LinkedInSource(JobSource):
         except Exception:
             cffi_session = None
 
-        for query in queries[:4]:
+        for query in queries[:5]:
             try:
                 jobs = self._fetch_for_query(
                     query=query,
@@ -148,59 +148,87 @@ class LinkedInSource(JobSource):
         timeout: int,
         cffi_session: object | None = None,
     ) -> list[NormalizedJob]:
-        params = {
-            "keywords": query,
-            "location": location,
-            "f_TPR": "r604800",  # last 7 days
-            "start": 0,
-        }
-        url = f"{LINKEDIN_JOBS_URL}?{urlencode(params)}"
-        cffi_headers = {
-            "Referer": "https://www.google.com/",
-            "Accept-Language": "en-US,en;q=0.9",
-        }
+        settings = get_settings()
+        lookback_seconds = max(86400, settings.job_lookback_days * 86400)
+        tpr = f"r{lookback_seconds}"
+        pages_to_fetch = min(settings.max_pages_per_source, 2)
 
-        if cffi_session is not None:
-            try:
-                resp = cffi_session.get(url, headers=cffi_headers, timeout=timeout)
-                if resp.status_code == 429:
-                    time.sleep(3)
+        all_query_jobs: list[NormalizedJob] = []
+
+        for page_idx in range(pages_to_fetch):
+            start_offset = page_idx * 25
+            params = {
+                "keywords": query,
+                "location": location,
+                "f_TPR": tpr,
+                "start": start_offset,
+            }
+            url = f"{LINKEDIN_JOBS_URL}?{urlencode(params)}"
+            cffi_headers = {
+                "Referer": "https://www.google.com/",
+                "Accept-Language": "en-US,en;q=0.9",
+            }
+
+            page_jobs: list[NormalizedJob] | None = None
+
+            if cffi_session is not None:
+                try:
                     resp = cffi_session.get(url, headers=cffi_headers, timeout=timeout)
-                if resp.status_code == 200 and len(resp.text) > 200:
-                    parsed = parse_linkedin_jobs(resp.text, self.source_name)
-                    if parsed is not None:
-                        return parsed
-            except Exception as cffi_err:
-                logger.debug(
-                    "curl_cffi LinkedIn attempt failed, falling back to httpx",
-                    extra={"error": str(cffi_err)[:100]},
-                )
+                    if resp.status_code == 429:
+                        time.sleep(3)
+                        resp = cffi_session.get(url, headers=cffi_headers, timeout=timeout)
+                    if resp.status_code == 200 and len(resp.text) > 200:
+                        parsed = parse_linkedin_jobs(resp.text, self.source_name)
+                        if parsed is not None:
+                            page_jobs = parsed
+                except Exception as cffi_err:
+                    logger.debug(
+                        "curl_cffi LinkedIn attempt failed, falling back to httpx",
+                        extra={"error": str(cffi_err)[:100]},
+                    )
 
-        try:
-            with httpx.Client(timeout=timeout, follow_redirects=True) as client:
-                response = client.get(url, headers=self._build_headers())
-                if response.status_code == 429:
-                    time.sleep(3)
-                    response = client.get(url, headers=self._build_headers())
-                if response.status_code == 429:
-                    raise SourceError(
+            if page_jobs is None:
+                try:
+                    with httpx.Client(timeout=timeout, follow_redirects=True) as client:
+                        response = client.get(url, headers=self._build_headers())
+                        if response.status_code == 429:
+                            time.sleep(3)
+                            response = client.get(url, headers=self._build_headers())
+                        if response.status_code == 429:
+                            if all_query_jobs:
+                                break
+                            raise SourceError(
+                                self.source_name,
+                                "Rate limited by LinkedIn",
+                                category="rate_limit",
+                            )
+                        if response.status_code != 200:
+                            if all_query_jobs:
+                                break
+                            raise SourceParseError(
+                                self.source_name,
+                                f"HTTP {response.status_code} from LinkedIn",
+                                category="http_error",
+                            )
+                        page_jobs = parse_linkedin_jobs(response.text, self.source_name)
+                except httpx.TimeoutException as exc:
+                    if all_query_jobs:
+                        break
+                    raise SourceTimeoutError(
                         self.source_name,
-                        "Rate limited by LinkedIn",
-                        category="rate_limit",
-                    )
-                if response.status_code != 200:
-                    raise SourceParseError(
-                        self.source_name,
-                        f"HTTP {response.status_code} from LinkedIn",
-                        category="http_error",
-                    )
-                return parse_linkedin_jobs(response.text, self.source_name)
-        except httpx.TimeoutException as exc:
-            raise SourceTimeoutError(
-                self.source_name,
-                f"Request timed out after {timeout}s",
-                category="timeout",
-            ) from exc
+                        f"Request timed out after {timeout}s",
+                        category="timeout",
+                    ) from exc
+
+            if page_jobs:
+                all_query_jobs.extend(page_jobs)
+                if len(page_jobs) < 10:
+                    break
+                time.sleep(0.5)
+            else:
+                break
+
+        return all_query_jobs
 
     def search_jobs(self, queries, location=None, posted_after=None, max_results=50):
         _, result = self.fetch_jobs(queries, location, posted_after, max_results)

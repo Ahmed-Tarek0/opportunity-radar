@@ -118,15 +118,20 @@ def _heuristic_extract_profile(cv_text: str) -> CandidateProfile:
 
     # Extract potential skills from common technology keywords
     COMMON_SKILLS = [
-        "python", "javascript", "typescript", "java", "c++", "c#", "go", "rust",
-        "react", "vue", "angular", "next.js", "node.js", "express",
-        "django", "flask", "fastapi", "spring",
+        "python", "javascript", "typescript", "java", "c++", "c#", "go", "rust", "php", "ruby", "kotlin", "swift", "dart",
+        "react", "vue", "angular", "next.js", "node.js", "express", "html", "css", "tailwind",
+        "django", "flask", "fastapi", "spring", "spring boot", "laravel", "asp.net",
         "postgresql", "mysql", "sqlite", "mongodb", "redis",
-        "docker", "kubernetes", "aws", "gcp", "azure",
-        "git", "linux", "sql", "html", "css",
-        "tensorflow", "pytorch", "pandas", "numpy", "scikit-learn",
-        "celery", "kafka", "rabbitmq",
+        "docker", "kubernetes", "aws", "gcp", "azure", "terraform", "ansible", "jenkins", "ci/cd",
+        "git", "linux", "sql", "bash",
+        "tensorflow", "pytorch", "pandas", "numpy", "scikit-learn", "keras",
+        "celery", "kafka", "rabbitmq", "spark", "airflow", "dbt",
         "graphql", "rest", "grpc",
+        "flutter", "react native", "android", "ios",
+        "selenium", "playwright", "cypress", "pytest", "postman", "jmeter",
+        "burp suite", "nmap", "wireshark", "metasploit", "owasp",
+        "power bi", "tableau",
+        "embedded", "firmware", "rtos",
     ]
 
     found_skills = []
@@ -170,90 +175,174 @@ def _heuristic_extract_profile(cv_text: str) -> CandidateProfile:
         "gen ai", "stable diffusion",
     ]
     _AI_WHOLE_WORDS = ["mlops", "nlp", "llm", "rag"]
-
     has_ai_ml = (
         any(phrase in text_lower for phrase in _AI_PHRASES)
         or any(_whole_word(text_lower, w) for w in _AI_WHOLE_WORDS)
     )
 
-    _DATA_PHRASES = [
-        "data science", "data scientist", "data analysis", "data analyst",
-        "pandas", "numpy", "power bi", "tableau",
+    _data_eng_phrases = [
+        "data engineer", "data engineering", "apache spark", "pyspark",
+        "apache airflow", "dbt", "etl pipeline", "data pipeline", "databricks", "snowflake",
     ]
-    has_data = any(phrase in text_lower for phrase in _DATA_PHRASES)
+    has_data_eng = any(phrase in text_lower for phrase in _data_eng_phrases)
 
-    _FRONTEND_PHRASES = ["react", "vue", "angular", "next.js", "frontend", "front-end"]
-    _FRONTEND_WHOLE = ["javascript", "typescript"]
+    _data_analyst_phrases = [
+        "data science", "data scientist", "data analysis", "data analyst",
+        "power bi", "tableau", "business intelligence", "eda", "exploratory data",
+    ]
+    has_data = any(phrase in text_lower for phrase in _data_analyst_phrases)
+
+    _frontend_phrases = ["react", "vue", "angular", "next.js", "frontend", "front-end", "svelte", "tailwind"]
     has_frontend = (
-        any(phrase in text_lower for phrase in _FRONTEND_PHRASES)
-        or any(_whole_word(text_lower, w) for w in _FRONTEND_WHOLE)
+        any(phrase in text_lower for phrase in _frontend_phrases)
+        or (any(term in text_lower for term in ["html", "css"]) and any(term in text_lower for term in ["javascript", "typescript"]))
     )
 
-    _BACKEND_PHRASES = [
-        "django", "flask", "fastapi", "spring", "backend", "back-end",
-        "express", "node.js", "nodejs",
+    _backend_phrases = [
+        "django", "flask", "fastapi", "spring boot", "spring framework", "backend", "back-end",
+        "express.js", "nest.js", "nestjs", "laravel", "asp.net", "ruby on rails",
     ]
-    has_backend = any(phrase in text_lower for phrase in _BACKEND_PHRASES)
+    has_backend = any(phrase in text_lower for phrase in _backend_phrases)
 
-    _SECURITY_PHRASES = [
+    _devops_phrases = [
+        "devops", "cloud engineer", "site reliability", "kubernetes", "terraform",
+        "ansible", "ci/cd", "continuous integration", "infrastructure as code",
+        "docker compose", "helm", "prometheus", "grafana",
+    ]
+    _devops_whole = ["sre", "iac", "k8s"]
+    has_devops = (
+        any(phrase in text_lower for phrase in _devops_phrases)
+        or any(_whole_word(text_lower, w) for w in _devops_whole)
+    )
+
+    _mobile_phrases = [
+        "mobile developer", "mobile engineer", "flutter", "react native",
+        "android developer", "ios developer", "swiftui",
+    ]
+    _mobile_whole = ["ios", "android", "flutter", "swift", "kotlin", "dart"]
+    has_mobile = (
+        any(phrase in text_lower for phrase in _mobile_phrases)
+        or any(_whole_word(text_lower, w) for w in _mobile_whole)
+    )
+
+    _security_phrases = [
         "penetration testing", "cybersecurity", "cyber security", "ethical hacking",
         "vulnerability assessment", "exploit", "malware analysis", "forensics",
-        "burp suite", "metasploit", "owasp", "kali linux",
+        "burp suite", "metasploit", "owasp", "kali linux", "information security",
     ]
-    _SECURITY_WHOLE = ["siem", "nmap", "osint"]
+    _security_whole = ["siem", "nmap", "osint", "soc", "infosec"]
     has_security = (
-        any(phrase in text_lower for phrase in _SECURITY_PHRASES)
-        or any(_whole_word(text_lower, w) for w in _SECURITY_WHOLE)
+        any(phrase in text_lower for phrase in _security_phrases)
+        or any(_whole_word(text_lower, w) for w in _security_whole)
     )
 
-    if has_ai_ml:
-        target_titles.append(TargetTitle(
-            title="AI Software Engineer",
-            rationale="AI / Machine Learning technologies detected in CV",
-            confidence=0.8,
-        ))
-        target_titles.append(TargetTitle(
-            title="Machine Learning Engineer",
-            rationale="ML/Deep Learning frameworks detected in CV",
-            confidence=0.75,
-        ))
-    elif has_data:
-        target_titles.append(TargetTitle(
-            title="Data Scientist",
-            rationale="Data science libraries and techniques detected in CV",
-            confidence=0.75,
-        ))
+    _qa_phrases = [
+        "quality assurance", "qa engineer", "qa automation", "test automation",
+        "selenium", "playwright", "cypress", "automated testing", "performance testing",
+    ]
+    _qa_whole = ["sdet", "qa", "jmeter"]
+    has_qa = (
+        any(phrase in text_lower for phrase in _qa_phrases)
+        or any(_whole_word(text_lower, w) for w in _qa_whole)
+    )
 
+    _embedded_phrases = [
+        "embedded systems", "embedded software", "firmware", "microcontroller",
+        "rtos", "free rtos", "device driver", "internet of things",
+    ]
+    _embedded_whole = ["iot", "stm32", "esp32", "avr"]
+    has_embedded = (
+        any(phrase in text_lower for phrase in _embedded_phrases)
+        or any(_whole_word(text_lower, w) for w in _embedded_whole)
+    )
+
+    # Build primary target titles based on detected specializations
     if has_security:
         target_titles.append(TargetTitle(
             title="Cybersecurity Engineer",
             rationale="Security tools and concepts detected in CV",
-            confidence=0.8,
+            confidence=0.85,
+        ))
+    if has_ai_ml:
+        target_titles.append(TargetTitle(
+            title="AI Software Engineer",
+            rationale="AI / Machine Learning technologies detected in CV",
+            confidence=0.85,
+        ))
+        target_titles.append(TargetTitle(
+            title="Machine Learning Engineer",
+            rationale="ML/Deep Learning frameworks detected in CV",
+            confidence=0.80,
+        ))
+    if has_data_eng:
+        target_titles.append(TargetTitle(
+            title="Data Engineer",
+            rationale="Data engineering pipelines and tools detected in CV",
+            confidence=0.80,
+        ))
+    if has_data and not has_ai_ml:
+        target_titles.append(TargetTitle(
+            title="Data Analyst",
+            rationale="Data analysis and visualization tools detected in CV",
+            confidence=0.75,
+        ))
+    if has_devops:
+        target_titles.append(TargetTitle(
+            title="DevOps Engineer",
+            rationale="Cloud and infrastructure automation tools detected in CV",
+            confidence=0.80,
+        ))
+    if has_mobile:
+        target_titles.append(TargetTitle(
+            title="Mobile Developer",
+            rationale="Mobile application development frameworks detected in CV",
+            confidence=0.80,
+        ))
+    if has_qa:
+        target_titles.append(TargetTitle(
+            title="QA Automation Engineer",
+            rationale="Testing and QA automation frameworks detected in CV",
+            confidence=0.80,
+        ))
+    if has_embedded:
+        target_titles.append(TargetTitle(
+            title="Embedded Systems Engineer",
+            rationale="Embedded systems and firmware concepts detected in CV",
+            confidence=0.80,
         ))
 
-    if "python" in text_lower and not has_ai_ml and not has_security:
+    # Web & general software roles (guarded so specialized CVs aren't overly diluted)
+    if has_frontend and has_backend and not has_security:
         target_titles.append(TargetTitle(
-            title="Python Developer",
-            rationale="Python found in CV (heuristic)",
-            confidence=0.6,
+            title="Full Stack Developer",
+            rationale="Both frontend and backend technologies found in CV",
+            confidence=0.75,
         ))
-    if has_frontend:
+    elif has_frontend and not has_security and not has_embedded:
         target_titles.append(TargetTitle(
             title="Frontend Developer",
             rationale="Frontend technologies found in CV (heuristic)",
-            confidence=0.6,
+            confidence=0.70,
         ))
-    if has_backend and not has_ai_ml:
+    elif has_backend and not has_ai_ml and not has_security:
         target_titles.append(TargetTitle(
             title="Backend Developer",
             rationale="Backend frameworks found in CV (heuristic)",
-            confidence=0.6,
+            confidence=0.70,
         ))
+
+    if "python" in text_lower and not has_ai_ml and not has_security and not has_data_eng and not has_backend:
+        target_titles.append(TargetTitle(
+            title="Python Developer",
+            rationale="Python programming language found in CV",
+            confidence=0.65,
+        ))
+
     if not target_titles:
         target_titles.append(TargetTitle(
             title="Software Engineer",
             rationale="General software engineering profile",
-            confidence=0.5,
+            confidence=0.50,
         ))
 
     return CandidateProfile(

@@ -155,14 +155,27 @@ class RemoteOKSource(JobSource):
 
                 # Filter by relevance to queries
                 if query_lower:
-                    job_text = f"{job.title} {' '.join(job.required_skills)}".lower()
+                    job_title_lower = job.title.lower()
+                    job_text = f"{job_title_lower} {' '.join(job.required_skills)}".lower()
                     tags_text = " ".join(raw.get("tags", [])).lower()
                     all_text = f"{job_text} {tags_text}"
-                    keywords = {w for q in query_lower for w in q.split() if len(w) > 3 and w not in {"the", "and", "for", "with", "engineer", "specialist"}}
-                    # Must match the full query phrase OR at least 2 distinct domain keywords
+
+                    # Filter out non-engineering/non-tech positions unless requested
+                    non_tech_roles = {
+                        "sales", "marketing", "account executive", "recruiter",
+                        "talent acquisition", "copywriter", "writer", "customer success",
+                        "customer support", "legal counsel", "dean", "human resources",
+                    }
+                    if any(ns in job_title_lower for ns in non_tech_roles):
+                        if not any(ns in q for q in query_lower for ns in non_tech_roles):
+                            continue
+
+                    stop_words = {"the", "and", "for", "with", "junior", "senior", "lead", "intern", "entry", "level", "developer", "engineer"}
+                    keywords = {w for q in query_lower for w in q.split() if len(w) >= 3 and w not in stop_words}
                     matches_phrase = any(q in all_text for q in query_lower)
-                    matching_kws = [kw for kw in keywords if kw in all_text]
-                    if not (matches_phrase or len(matching_kws) >= 2):
+                    matches_keyword = any(kw in all_text for kw in keywords)
+
+                    if not (matches_phrase or matches_keyword):
                         continue
 
                 jobs.append(job)
