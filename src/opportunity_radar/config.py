@@ -20,7 +20,7 @@ class Settings(BaseSettings):
 
     # App
     app_env: Literal["development", "staging", "production"] = "development"
-    demo_mode: bool = True
+    demo_mode: bool = False
     default_timezone: str = "Africa/Cairo"
     database_url: str = "sqlite:///./data/opportunity_radar.db"
 

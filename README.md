@@ -15,6 +15,14 @@
 
 ---
 
+# 🌐 Live Demo & Deployment
+
+[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://opportunity-radar-selector.streamlit.app/)
+
+🔗 **Live Web Application:** [https://opportunity-radar-selector.streamlit.app/](https://opportunity-radar-selector.streamlit.app/)
+
+---
+
 # 📖 Project Overview
 
 **Opportunity Radar** is an intelligent, privacy-centric job discovery and deterministic candidate-matching platform. It ingests software engineering and tech resumes across diverse formats (PDF, DOCX, TXT), accurately parses skills, career milestones, and target roles with grounded citations, queries real-time job feeds and ATS endpoints, and ranks opportunities using a transparent, multi-factor scoring rubric — all while respecting strict date integrity and candidate privacy boundaries.
@@ -74,24 +82,24 @@ Unlike opaque "black-box" job matching engines, Opportunity Radar provides full 
 
 ```mermaid
 graph LR
-    CV[Candidate CV (PDF/DOCX/TXT)] --> PE[ProfileExtractor (LLM / In-Memory)]
-    PE --> CP[CandidateProfile Model]
-    CP --> SWS[SearchWorkflowService]
+    CV["Candidate CV (PDF/DOCX/TXT)"] --> PE["ProfileExtractor (LLM / In-Memory)"]
+    PE --> CP["CandidateProfile Model"]
+    CP --> SWS["SearchWorkflowService"]
     
-    subgraph Sources [Job Source Connectors]
-        SWS --> LI[LinkedIn Guest]
-        SWS --> WZ[WUZZUF (Direct + Sitemap)]
-        SWS --> BY[Bayt Egypt]
-        SWS --> RO[Remote OK API]
-        SWS --> RM[Remotive API]
-        SWS --> ATS[Greenhouse / Lever / Adzuna]
+    subgraph Sources ["Job Source Connectors"]
+        SWS --> LI["LinkedIn Guest"]
+        SWS --> WZ["WUZZUF (Direct + Sitemap)"]
+        SWS --> BY["Bayt Egypt"]
+        SWS --> RO["Remote OK API"]
+        SWS --> RM["Remotive API"]
+        SWS --> ATS["Greenhouse / Lever / Adzuna"]
     end
 
-    Sources --> DEDUP[Deduplicator & Content Hash]
-    DEDUP --> NORM[Job Normalizer & Skill Extractor]
-    NORM --> SCORER[Deterministic Scorer (0-100% Rubric)]
-    SCORER --> UI[Streamlit UI Dashboard]
-    SCORER --> DB[(SQLAlchemy 2.x / SQLite)]
+    Sources --> DEDUP["Deduplicator & Content Hash"]
+    DEDUP --> NORM["Job Normalizer & Skill Extractor"]
+    NORM --> SCORER["Deterministic Scorer (0-100% Rubric)"]
+    SCORER --> UI["Streamlit UI Dashboard"]
+    SCORER --> DB[("SQLAlchemy 2.x / SQLite")]
 ```
 
 ---
@@ -156,13 +164,13 @@ python scripts/init_db.py
 ```bash
 streamlit run app.py
 ```
-Open your browser at `http://localhost:8501`.
+Open your browser at `http://localhost:8501` or visit the [Live Deployment](https://opportunity-radar-selector.streamlit.app/).
 
 ### User Flow:
 1. **Upload CV (`Profile` Page)**: Upload your CV (PDF, DOCX, or TXT). The system extracts your skills, experience, and target roles in-memory.
 2. **Discover Jobs (`Discover Jobs` Page)**:
    - Select your lookback window (1 Week, 2 Weeks, 3 Weeks, 1 Month).
-   - Click **Find Jobs** to trigger parallel queries across all enabled sources.
+   - Click **Find Jobs** to trigger parallel queries across all enabled live sources.
 3. **Inspect Match Details**: Review detailed scores, evidence citations, matched vs. missing skills, and direct apply links.
 4. **Save & Export (`Saved Jobs` Page)**: Bookmark opportunities, add notes, and export to CSV.
 
