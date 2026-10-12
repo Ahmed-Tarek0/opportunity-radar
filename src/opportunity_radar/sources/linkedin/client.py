@@ -37,19 +37,25 @@ class LinkedInSource(JobSource):
         return "LinkedIn"
 
     def is_configured(self) -> bool:
-        return True  # No API key required for public search
+        return True
 
     def is_enabled(self) -> bool:
         return get_settings().enable_linkedin_source
 
     def _build_headers(self) -> dict[str, str]:
         return {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-            "Accept-Language": "en-US,en;q=0.5",
+            "User-Agent": (
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/124.0.0.0 Safari/537.36"
+            ),
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+            "Accept-Language": "en-US,en;q=0.9",
             "Accept-Encoding": "gzip, deflate, br",
+            "Referer": "https://www.google.com/",
             "DNT": "1",
             "Connection": "keep-alive",
+            "Upgrade-Insecure-Requests": "1",
         }
 
     def fetch_jobs(
@@ -73,16 +79,24 @@ class LinkedInSource(JobSource):
         all_jobs: list[NormalizedJob] = []
         warnings: list[str] = []
 
-        # Query top 4 search queries to fetch a healthy pool of jobs without triggering rate limits
+        cffi_session = None
+        try:
+            from curl_cffi import requests as cffi_requests
+
+            cffi_session = cffi_requests.Session(impersonate="chrome124")
+        except Exception:
+            cffi_session = None
+
         for query in queries[:4]:
             try:
                 jobs = self._fetch_for_query(
                     query=query,
                     location=location or "Egypt",
                     timeout=settings.request_timeout_seconds,
+                    cffi_session=cffi_session,
                 )
                 all_jobs.extend(jobs)
-                time.sleep(0.5)  # be polite
+                time.sleep(0.8)
             except SourceTimeoutError as exc:
                 warnings.append(f"Timeout for query '{query}': {exc}")
                 logger.warning("LinkedIn timeout", extra={"query": query})
@@ -93,17 +107,21 @@ class LinkedInSource(JobSource):
                 warnings.append(f"Error for query '{query}': {type(exc).__name__}")
                 logger.error("LinkedIn unexpected error", extra={"error": str(exc)[:100]})
 
+        if cffi_session is not None:
+            try:
+                cffi_session.close()
+            except Exception:
+                pass
+
         completed = datetime.now(UTC)
         duration = (completed - started).total_seconds()
 
-        # Determine status
         if not all_jobs and warnings:
             status = SourceStatus.failed
             message = (
                 "LinkedIn search returned no results. "
                 "The public endpoint may be unavailable or blocking requests. "
-                "This is expected; LinkedIn does not provide a stable public API. "
-                "Enable Demo Mode to see example jobs."
+                "This is expected; LinkedIn does not provide a stable public API."
             )
         elif warnings:
             status = SourceStatus.partial
@@ -124,7 +142,11 @@ class LinkedInSource(JobSource):
         )
 
     def _fetch_for_query(
-        self, query: str, location: str, timeout: int
+        self,
+        query: str,
+        location: str,
+        timeout: int,
+        cffi_session: object | None = None,
     ) -> list[NormalizedJob]:
         params = {
             "keywords": query,
@@ -133,10 +155,33 @@ class LinkedInSource(JobSource):
             "start": 0,
         }
         url = f"{LINKEDIN_JOBS_URL}?{urlencode(params)}"
+        cffi_headers = {
+            "Referer": "https://www.google.com/",
+            "Accept-Language": "en-US,en;q=0.9",
+        }
+
+        if cffi_session is not None:
+            try:
+                resp = cffi_session.get(url, headers=cffi_headers, timeout=timeout)
+                if resp.status_code == 429:
+                    time.sleep(3)
+                    resp = cffi_session.get(url, headers=cffi_headers, timeout=timeout)
+                if resp.status_code == 200 and len(resp.text) > 200:
+                    parsed = parse_linkedin_jobs(resp.text, self.source_name)
+                    if parsed is not None:
+                        return parsed
+            except Exception as cffi_err:
+                logger.debug(
+                    "curl_cffi LinkedIn attempt failed, falling back to httpx",
+                    extra={"error": str(cffi_err)[:100]},
+                )
 
         try:
             with httpx.Client(timeout=timeout, follow_redirects=True) as client:
                 response = client.get(url, headers=self._build_headers())
+                if response.status_code == 429:
+                    time.sleep(3)
+                    response = client.get(url, headers=self._build_headers())
                 if response.status_code == 429:
                     raise SourceError(
                         self.source_name,
