@@ -90,6 +90,20 @@ class Settings(BaseSettings):
         return [s.strip() for s in self.lever_company_slugs.split(",") if s.strip()]
 
 
+def _populate_from_streamlit_secrets() -> None:
+    try:
+        import os
+        import streamlit as st
+        if hasattr(st, "secrets"):
+            for key, val in st.secrets.items():
+                if isinstance(val, (str, int, float, bool)) and key.upper() not in os.environ:
+                    os.environ[key.upper()] = str(val)
+    except Exception:
+        pass
+
+
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:
+    _populate_from_streamlit_secrets()
     return Settings()
+
