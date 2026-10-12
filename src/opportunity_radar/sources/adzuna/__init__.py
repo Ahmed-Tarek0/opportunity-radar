@@ -1,0 +1,1 @@
+"""Adzuna source adapter package."""

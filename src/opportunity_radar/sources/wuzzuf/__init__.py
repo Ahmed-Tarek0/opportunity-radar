@@ -1,0 +1,1 @@
+"""WUZZUF source adapter package."""
