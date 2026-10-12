@@ -136,45 +136,45 @@ def compute_match_score(
         ai_overlap = overlap & ai_domain_keywords
 
         if len(overlap) >= 2:
-            # Strong 2+ word overlap — but only award full 20 if at least one is AI-domain specific
+            # Strong 2+ word overlap — but only award full 25 if at least one is AI-domain specific
             # AND the job is not in a completely different engineering domain.
             # e.g. "machine" in "Electrical Power Machine" ≠ "Machine Learning"
             generic_only = (overlap <= {"software", "engineer", "engineering", "developer"})
             if ai_overlap and not is_non_ai_domain:
                 # Real AI/data domain match with no conflicting domain signals
-                title_score = 20.0
+                title_score = 25.0
                 title_reason = f"Strong AI-domain title match: '{target}' aligns with '{job.title}'."
                 break
             elif ai_overlap and is_non_ai_domain:
                 # AI word appears but job domain is clearly non-AI (e.g. "machine" in "Power Machine")
-                title_score = max(title_score, 6.0)
+                title_score = max(title_score, 7.0)
                 title_reason = (
                     f"AI keyword ('{', '.join(ai_overlap)}') in job title, but job is in a non-AI domain."
                 )
             elif generic_only or is_non_ai_domain:
                 # Only generic words or job is in a different domain — soft partial match
-                title_score = max(title_score, 8.0)
+                title_score = max(title_score, 10.0)
                 title_reason = (
                     f"Generic title overlap ('{', '.join(overlap)}') — job domain may differ from '{target}'."
                 )
             else:
                 # Tech overlap (backend, devops, etc.) without AI words
-                title_score = max(title_score, 14.0)
+                title_score = max(title_score, 18.0)
                 title_reason = f"Tech-domain title match: '{target}' aligns with '{job.title}'."
         elif len(overlap) == 1:
             matched_word = list(overlap)[0]
             if matched_word in ai_domain_keywords and not is_non_ai_domain:
-                title_score = max(title_score, 14.0)
+                title_score = max(title_score, 18.0)
                 title_reason = f"AI-domain keyword '{matched_word}' aligns with target '{target}'."
             elif matched_word in tech_keywords and not is_non_ai_domain:
-                title_score = max(title_score, 8.0)
+                title_score = max(title_score, 10.0)
                 title_reason = f"Tech keyword '{matched_word}' aligns with target '{target}'."
             elif matched_word in {"engineer", "engineering"} and not is_non_ai_domain:
                 # "engineer" alone is too generic — give minimal points only if domain looks OK
-                title_score = max(title_score, 5.0)
+                title_score = max(title_score, 6.0)
                 title_reason = f"Generic word '{matched_word}' partially matches '{target}' (weak signal)."
             else:
-                title_score = max(title_score, 3.0)
+                title_score = max(title_score, 4.0)
                 title_reason = f"Weak/generic overlap ('{matched_word}') with '{target}'."
 
     # Extra penalty if the job title is clearly in a non-AI engineering domain
@@ -184,20 +184,19 @@ def compute_match_score(
             title_reason + f" [Penalized: job title contains non-AI domain keywords]"
         )
 
-
     if not candidate_titles:
-        title_score = 10.0
+        title_score = 12.5
         title_reason = "No target titles specified in profile."
 
     title_component = ScoreComponent(
         name="Role & Title Alignment",
-        weight=0.20,
+        weight=0.25,
         earned_points=round(title_score, 1),
-        max_points=20.0,
+        max_points=25.0,
         reason=title_reason or "No title match found.",
     )
 
-    # === SKILL ALIGNMENT (40 pts) ===
+    # === SKILL ALIGNMENT (50 pts) ===
     skill_result = match_skills(
         candidate_skills=candidate_skills,
         job_required=job.required_skills,
@@ -208,19 +207,19 @@ def compute_match_score(
     pref_rate = skill_result["preferred_match_rate"]
 
     if job.required_skills or job.preferred_skills:
-        skill_pts = (req_rate * 30) + (pref_rate * 10)
-        # If the job has only 1 generic requirement (e.g. 'Software Engineering') and title has 0 alignment, don't award full 40 pts!
-        if len(job.required_skills) == 1 and title_score < 6.0:
-            skill_pts = min(skill_pts, 12.0)
+        skill_pts = (req_rate * 38) + (pref_rate * 12)
+        # If the job has only 1 generic requirement (e.g. 'Software Engineering') and title has 0 alignment, don't award full pts!
+        if len(job.required_skills) == 1 and title_score < 7.0:
+            skill_pts = min(skill_pts, 15.0)
     else:
         # If no skills listed in job: only award neutral points if the title actually aligns!
-        skill_pts = 15.0 if title_score >= 12.0 else 0.0
+        skill_pts = 20.0 if title_score >= 15.0 else 0.0
 
     skill_component = ScoreComponent(
         name="Skill Alignment",
-        weight=0.40,
+        weight=0.50,
         earned_points=round(skill_pts, 1),
-        max_points=40.0,
+        max_points=50.0,
         reason=(
             f"Matched {len(skill_result['matched_required'])} of {len(job.required_skills)} "
             f"required skills and {len(skill_result['matched_preferred'])} of "
@@ -265,22 +264,22 @@ def compute_match_score(
         reason=seniority_reason,
     )
 
-    # === WORK ARRANGEMENT (15 pts) ===
-    work_pts = 15.0
-    work_reason = "Work arrangement is compatible with candidate preferences."
+    # === WORK ARRANGEMENT / ELIGIBILITY (Eligibility Gate / Informational) ===
+    # Work arrangement & location eligibility is kept as an essential filter / gate,
+    # but does not grant artificial score points so scores reflect actual technical fit.
+    work_pts = 0.0
+    work_reason = "Candidate is eligible for this job location / work arrangement."
 
     if eligibility_status == EligibilityStatus.likely_ineligible:
-        work_pts = 0.0
         work_reason = "Work arrangement does not match candidate eligibility."
     elif eligibility_status == EligibilityStatus.unknown:
-        work_pts = 7.5
         work_reason = "Work arrangement eligibility is uncertain."
 
     work_component = ScoreComponent(
         name="Work Arrangement & Location",
-        weight=0.15,
+        weight=0.0,
         earned_points=work_pts,
-        max_points=15.0,
+        max_points=0.0,
         reason=work_reason,
     )
 

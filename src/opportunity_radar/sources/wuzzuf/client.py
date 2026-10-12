@@ -141,14 +141,37 @@ class WuzzufSource(JobSource):
     def _fetch_from_sitemap(self, queries: list[str], posted_after: datetime | None, timeout: int = 15) -> list[NormalizedJob]:
         """Fetch jobs directly from WUZZUF public sitemap when search HTML is blocked by Cloudflare."""
         import re
-        from curl_cffi import requests as cffi_requests
         from ...schemas.job import DateStatus, WorkMode
 
-        resp = cffi_requests.get("https://wuzzuf.net/sitemap-job-1.xml", timeout=timeout)
-        if resp.status_code != 200 or len(resp.text) < 1000:
+        sitemap_url = "https://wuzzuf.net/sitemap-job-1.xml"
+        sitemap_text = ""
+
+        try:
+            from curl_cffi import requests as cffi_requests
+            resp = cffi_requests.get(sitemap_url, impersonate="chrome124", timeout=timeout)
+            if resp.status_code == 200 and len(resp.text) >= 1000:
+                sitemap_text = resp.text
+        except Exception:
+            pass
+
+        if not sitemap_text:
+            import httpx
+            try:
+                headers = {
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+                    "Accept": "text/xml,application/xml,application/xhtml+xml,text/html;q=0.9",
+                }
+                with httpx.Client(timeout=timeout, follow_redirects=True) as client:
+                    resp = client.get(sitemap_url, headers=headers)
+                    if resp.status_code == 200 and len(resp.text) >= 1000:
+                        sitemap_text = resp.text
+            except Exception:
+                pass
+
+        if not sitemap_text:
             return []
 
-        entries = re.findall(r"<url>\s*<loc>(.*?)</loc>\s*<lastmod>(.*?)</lastmod>", resp.text)
+        entries = re.findall(r"<url>\s*<loc>(.*?)</loc>\s*<lastmod>(.*?)</lastmod>", sitemap_text)
         
         # Build query keywords pattern
         target_tokens = set()

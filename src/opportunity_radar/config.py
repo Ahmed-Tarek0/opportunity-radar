@@ -36,10 +36,10 @@ class Settings(BaseSettings):
     # Matching
     enable_semantic_matching: bool = True
     matching_version: str = "1.0.0"
-    skill_weight: float = 0.40
+    skill_weight: float = 0.50
     experience_weight: float = 0.25
-    title_weight: float = 0.20
-    work_arrangement_weight: float = 0.15
+    title_weight: float = 0.25
+    work_arrangement_weight: float = 0.00
 
     # CV
     cv_max_size_mb: int = 10

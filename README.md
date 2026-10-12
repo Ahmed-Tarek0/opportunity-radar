@@ -42,10 +42,10 @@ Unlike opaque "black-box" job matching engines, Opportunity Radar provides full 
   * **Greenhouse & Lever ATS** (Direct company job boards)
   * **Adzuna** (Comprehensive job index API)
 * **⚖️ Explainable Multi-Factor Scoring Rubric (0–100%)**:
-  * **40% Skill Alignment**: Mandatory vs. preferred skills matching with domain implication graphs (e.g., PyTorch implies Deep Learning/AI).
+  * **50% Skill Alignment**: Mandatory vs. preferred skills matching with domain implication graphs (e.g., PyTorch implies Deep Learning/AI).
+  * **25% Role & Title Relevance**: Domain-aware title alignment with strict false-positive filtering for unrelated engineering fields.
   * **25% Experience & Seniority Fit**: Seniority level compatibility matrix and years-of-experience calibration.
-  * **20% Role & Title Relevance**: AI/tech domain-aware semantic matching with false-positive filtering for unrelated engineering fields.
-  * **15% Work Arrangement & Location**: Remote eligibility and candidate timezone alignment (`Africa/Cairo`).
+  * **Location & Work Arrangement**: Handled as an eligibility gate / filter rather than inflating match scores artificially.
 * **📅 Absolute Date Integrity**: Records only verified original `posted_at` timestamps. It never substitutes fetch dates for posting dates.
 * **🚦 Isolated Failure Architecture & Graceful Degradation**: Sources operate as independent workers. If one source faces anti-bot challenges or timeouts, other sources complete without interruption.
 * **💾 Saved Jobs & Export**: Bookmark opportunities, manage application pipelines with persistent storage across browser refreshes, and export curated results directly to CSV.

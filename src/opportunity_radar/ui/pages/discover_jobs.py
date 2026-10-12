@@ -66,9 +66,12 @@ def main():
 
     st.divider()
 
-    # Warnings
-    for w in st.session_state.get("search_warnings", []):
-        st.warning(f"⚠️ {w}")
+    # Source Diagnostics / Warnings
+    warnings_list = st.session_state.get("search_warnings", [])
+    if warnings_list:
+        with st.expander("ℹ️ Source Diagnostics & Notices", expanded=False):
+            for w in warnings_list:
+                st.caption(f"• {w}")
 
     # Results
     jobs = get_search_results()
