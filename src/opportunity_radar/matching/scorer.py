@@ -99,9 +99,15 @@ def compute_match_score(
 
     # Infer secondary roles from candidate skills to ensure relevant jobs aren't penalized
     cand_skills_lower = {s.lower() for s in candidate_skills}
-    has_ai_skills = bool(cand_skills_lower & {"machine learning", "deep learning", "ai", "artificial intelligence", "pytorch", "tensorflow", "nlp", "computer vision", "llm"})
+    has_ai_skills = bool(cand_skills_lower & {
+        "machine learning", "deep learning", "artificial intelligence",
+        "pytorch", "tensorflow", "keras", "scikit-learn",
+        "nlp", "natural language processing", "computer vision",
+        "llm", "langchain", "huggingface", "mlops",
+    })
     has_python_skills = bool(cand_skills_lower & {"python", "django", "fastapi", "flask"})
     has_web_skills = bool(cand_skills_lower & {"react", "javascript", "typescript", "frontend", "vue", "angular", "node.js"})
+
 
     if has_ai_skills:
         for extra in ["ai software engineer", "ai engineer", "machine learning engineer"]:

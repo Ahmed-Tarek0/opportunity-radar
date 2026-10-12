@@ -155,12 +155,56 @@ def _heuristic_extract_profile(cv_text: str) -> CandidateProfile:
     elif any(w in text_lower for w in ["junior", "jr.", "entry"]):
         seniority = SeniorityLevel.junior
 
-    # Generate basic target titles from skills
+    import re as _re
+
+    def _whole_word(text: str, word: str) -> bool:
+        return bool(_re.search(r"\b" + _re.escape(word) + r"\b", text))
+
     target_titles = []
-    has_ai_ml = any(w in text_lower for w in ["machine learning", "deep learning", "tensorflow", "pytorch", "keras", "scikit-learn", "ai", "artificial intelligence", "nlp", "computer vision", "llm", "transformers", "langchain"])
-    has_data = any(w in text_lower for w in ["data science", "data scientist", "data analysis", "data analyst", "pandas", "numpy", "power bi", "tableau"])
-    has_frontend = any(w in text_lower for w in ["react", "javascript", "typescript", "vue", "angular", "next.js", "frontend"])
-    has_backend = any(w in text_lower for w in ["django", "flask", "fastapi", "spring", "backend", "express", "node.js", "nodejs"])
+
+    _AI_PHRASES = [
+        "machine learning", "deep learning", "tensorflow", "pytorch", "keras",
+        "scikit-learn", "artificial intelligence", "natural language processing",
+        "computer vision", "large language model", "transformers", "langchain",
+        "neural network", "reinforcement learning", "huggingface", "generative ai",
+        "gen ai", "stable diffusion",
+    ]
+    _AI_WHOLE_WORDS = ["mlops", "nlp", "llm", "rag"]
+
+    has_ai_ml = (
+        any(phrase in text_lower for phrase in _AI_PHRASES)
+        or any(_whole_word(text_lower, w) for w in _AI_WHOLE_WORDS)
+    )
+
+    _DATA_PHRASES = [
+        "data science", "data scientist", "data analysis", "data analyst",
+        "pandas", "numpy", "power bi", "tableau",
+    ]
+    has_data = any(phrase in text_lower for phrase in _DATA_PHRASES)
+
+    _FRONTEND_PHRASES = ["react", "vue", "angular", "next.js", "frontend", "front-end"]
+    _FRONTEND_WHOLE = ["javascript", "typescript"]
+    has_frontend = (
+        any(phrase in text_lower for phrase in _FRONTEND_PHRASES)
+        or any(_whole_word(text_lower, w) for w in _FRONTEND_WHOLE)
+    )
+
+    _BACKEND_PHRASES = [
+        "django", "flask", "fastapi", "spring", "backend", "back-end",
+        "express", "node.js", "nodejs",
+    ]
+    has_backend = any(phrase in text_lower for phrase in _BACKEND_PHRASES)
+
+    _SECURITY_PHRASES = [
+        "penetration testing", "cybersecurity", "cyber security", "ethical hacking",
+        "vulnerability assessment", "exploit", "malware analysis", "forensics",
+        "burp suite", "metasploit", "owasp", "kali linux",
+    ]
+    _SECURITY_WHOLE = ["siem", "nmap", "osint"]
+    has_security = (
+        any(phrase in text_lower for phrase in _SECURITY_PHRASES)
+        or any(_whole_word(text_lower, w) for w in _SECURITY_WHOLE)
+    )
 
     if has_ai_ml:
         target_titles.append(TargetTitle(
@@ -180,7 +224,14 @@ def _heuristic_extract_profile(cv_text: str) -> CandidateProfile:
             confidence=0.75,
         ))
 
-    if "python" in text_lower and not has_ai_ml:
+    if has_security:
+        target_titles.append(TargetTitle(
+            title="Cybersecurity Engineer",
+            rationale="Security tools and concepts detected in CV",
+            confidence=0.8,
+        ))
+
+    if "python" in text_lower and not has_ai_ml and not has_security:
         target_titles.append(TargetTitle(
             title="Python Developer",
             rationale="Python found in CV (heuristic)",
