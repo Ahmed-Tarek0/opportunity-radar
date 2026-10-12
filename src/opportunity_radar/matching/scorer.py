@@ -151,6 +151,16 @@ def compute_match_score(
     job_title_words_raw = set(job_title_lower.replace("-", " ").replace("/", " ").split())
     is_non_ai_domain = bool(job_title_words_raw & non_ai_domain_keywords)
 
+    # Detect if job is explicitly an AI/ML/Data role vs candidate has AI/ML/Data target
+    job_is_ai_role = bool(
+        {"ai", "artificial", "machine", "learning", "deep", "nlp", "llm", "genai", "generative"} & job_title_words_raw
+        or any(phrase in job_title_lower for phrase in ["machine learning", "deep learning", "artificial intelligence", "data science"])
+    )
+    candidate_has_ai_target = any(
+        any(phrase in t for phrase in ["ai", "machine learning", "deep learning", "artificial intelligence", "data science"])
+        for t in candidate_titles
+    )
+
     for target in candidate_titles:
         target_words = set(target.split())
         job_words = set(job_title_lower.split())
@@ -203,11 +213,18 @@ def compute_match_score(
                 title_score = max(title_score, 4.0)
                 title_reason = f"Weak/generic overlap ('{matched_word}') with '{target}'."
 
+    # Domain mismatch penalty: If the job is clearly an AI/ML role, but the candidate has no AI/ML target/profile
+    if job_is_ai_role and not candidate_has_ai_target:
+        title_score = min(title_score, 6.0)
+        title_reason = (
+            f"Job is an AI/ML specialized role ('{job.title}'), while candidate profile is outside AI domain."
+        )
+
     # Extra penalty if the job title is clearly in a non-AI engineering domain
     if is_non_ai_domain and title_score > 0 and not any(w in job_title_words_raw for w in ai_domain_keywords):
         title_score = min(title_score, 5.0)
         title_reason = (
-            title_reason + f" [Penalized: job title contains non-AI domain keywords]"
+            title_reason + " [Penalized: job title contains non-AI domain keywords]"
         )
 
     if not candidate_titles:
