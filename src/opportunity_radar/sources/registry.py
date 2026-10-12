@@ -92,9 +92,5 @@ def build_registry() -> SourceRegistry:
     from .remotive.client import RemotiveSource
     registry.register(RemotiveSource())
 
-    # Bayt Egypt (public Egyptian job search, no key required)
-    from .bayt.client import BaytSource
-    registry.register(BaytSource())
-
     logger.info("Source registry built", extra={"total": len(registry.all_sources())})
     return registry

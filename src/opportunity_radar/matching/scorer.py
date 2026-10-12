@@ -92,10 +92,30 @@ def compute_match_score(
 
     candidate_skills = list(candidate_knowledge)
 
-    # === TITLE/ROLE ALIGNMENT (20 pts) ===
+    # === TITLE/ROLE ALIGNMENT (25 pts) ===
     candidate_titles = [t.title.lower() for t in profile.target_titles]
     if profile.headline and profile.headline.lower() not in candidate_titles:
         candidate_titles.append(profile.headline.lower())
+
+    # Infer secondary roles from candidate skills to ensure relevant jobs aren't penalized
+    cand_skills_lower = {s.lower() for s in candidate_skills}
+    has_ai_skills = bool(cand_skills_lower & {"machine learning", "deep learning", "ai", "artificial intelligence", "pytorch", "tensorflow", "nlp", "computer vision", "llm"})
+    has_python_skills = bool(cand_skills_lower & {"python", "django", "fastapi", "flask"})
+    has_web_skills = bool(cand_skills_lower & {"react", "javascript", "typescript", "frontend", "vue", "angular", "node.js"})
+
+    if has_ai_skills:
+        for extra in ["ai software engineer", "ai engineer", "machine learning engineer"]:
+            if extra not in candidate_titles:
+                candidate_titles.append(extra)
+    if has_python_skills and not has_ai_skills:
+        for extra in ["python developer", "backend engineer", "python software engineer"]:
+            if extra not in candidate_titles:
+                candidate_titles.append(extra)
+    if has_web_skills:
+        for extra in ["frontend developer", "software engineer"]:
+            if extra not in candidate_titles:
+                candidate_titles.append(extra)
+
     job_title_lower = job.title.lower()
 
     title_score = 0.0

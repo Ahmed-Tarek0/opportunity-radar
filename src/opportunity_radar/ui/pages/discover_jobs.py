@@ -254,6 +254,8 @@ def _render_job_card(job, match):
                 
                 # Render components in styled 2x2 grid
                 for comp in match.score_breakdown:
+                    if comp.max_points <= 0:
+                        continue
                     pct = comp.earned_points / comp.max_points if comp.max_points > 0 else 0
                     bar_color = "#10b981" if pct >= 0.75 else ("#3b82f6" if pct >= 0.5 else "#f59e0b")
                     

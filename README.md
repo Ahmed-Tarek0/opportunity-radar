@@ -37,7 +37,6 @@ Unlike opaque "black-box" job matching engines, Opportunity Radar provides full 
 * **🔍 Multi-Source Opportunity Aggregation**: Simultaneously queries real-time regional and global job feeds:
   * **LinkedIn** (Public Guest Search)
   * **WUZZUF** (Egypt regional hub with sitemap resilience fallback)
-  * **Bayt Egypt** (Regional opportunities connector)
   * **Remote OK** & **Remotive** (Worldwide remote tech feeds)
   * **Greenhouse & Lever ATS** (Direct company job boards)
   * **Adzuna** (Comprehensive job index API)
@@ -89,7 +88,6 @@ graph LR
     subgraph Sources ["Job Source Connectors"]
         SWS --> LI["LinkedIn Guest"]
         SWS --> WZ["WUZZUF (Direct + Sitemap)"]
-        SWS --> BY["Bayt Egypt"]
         SWS --> RO["Remote OK API"]
         SWS --> RM["Remotive API"]
         SWS --> ATS["Greenhouse / Lever / Adzuna"]

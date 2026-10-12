@@ -157,23 +157,52 @@ def _heuristic_extract_profile(cv_text: str) -> CandidateProfile:
 
     # Generate basic target titles from skills
     target_titles = []
-    if "python" in text_lower:
+    has_ai_ml = any(w in text_lower for w in ["machine learning", "deep learning", "tensorflow", "pytorch", "keras", "scikit-learn", "ai", "artificial intelligence", "nlp", "computer vision", "llm", "transformers", "langchain"])
+    has_data = any(w in text_lower for w in ["data science", "data scientist", "data analysis", "data analyst", "pandas", "numpy", "power bi", "tableau"])
+    has_frontend = any(w in text_lower for w in ["react", "javascript", "typescript", "vue", "angular", "next.js", "frontend"])
+    has_backend = any(w in text_lower for w in ["django", "flask", "fastapi", "spring", "backend", "express", "node.js", "nodejs"])
+
+    if has_ai_ml:
+        target_titles.append(TargetTitle(
+            title="AI Software Engineer",
+            rationale="AI / Machine Learning technologies detected in CV",
+            confidence=0.8,
+        ))
+        target_titles.append(TargetTitle(
+            title="Machine Learning Engineer",
+            rationale="ML/Deep Learning frameworks detected in CV",
+            confidence=0.75,
+        ))
+    elif has_data:
+        target_titles.append(TargetTitle(
+            title="Data Scientist",
+            rationale="Data science libraries and techniques detected in CV",
+            confidence=0.75,
+        ))
+
+    if "python" in text_lower and not has_ai_ml:
         target_titles.append(TargetTitle(
             title="Python Developer",
             rationale="Python found in CV (heuristic)",
             confidence=0.6,
         ))
-    if any(w in text_lower for w in ["react", "javascript", "typescript"]):
+    if has_frontend:
         target_titles.append(TargetTitle(
             title="Frontend Developer",
             rationale="Frontend technologies found in CV (heuristic)",
             confidence=0.6,
         ))
+    if has_backend and not has_ai_ml:
+        target_titles.append(TargetTitle(
+            title="Backend Developer",
+            rationale="Backend frameworks found in CV (heuristic)",
+            confidence=0.6,
+        ))
     if not target_titles:
         target_titles.append(TargetTitle(
             title="Software Engineer",
-            rationale="Generic title; please review and update",
-            confidence=0.4,
+            rationale="General software engineering profile",
+            confidence=0.5,
         ))
 
     return CandidateProfile(

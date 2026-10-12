@@ -56,7 +56,7 @@ class Settings(BaseSettings):
     enable_lever_source: bool = False
     enable_adzuna_source: bool = False
     enable_remotive_source: bool = True
-    enable_bayt_source: bool = True
+    enable_bayt_source: bool = False
     adzuna_app_id: str = ""
     adzuna_app_key: str = ""
     greenhouse_board_slugs: str = ""  # comma-separated
